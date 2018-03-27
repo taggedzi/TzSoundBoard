@@ -1,6 +1,5 @@
 import os
 import pygame
-# import mutagen # added for playback length etc. possible slider to indicate play position.
 
 try:
     # python 3
@@ -9,6 +8,7 @@ try:
 except ImportError:
     # python 2
     import Tkinter as tkinter
+    from tkinter import filedialog
 
 
 class WindowController(object):
@@ -17,30 +17,41 @@ class WindowController(object):
                         ("OGG files", "*.ogg"))
 
     def __init__(self):
-        self.menu = None
-        self.volume = None
-        self.sounds = []
+        self.sound_registry = []
         self.main_window = tkinter.Tk()
-        self.main_window.geometry("500x300+150+150")
+        self.main_window.geometry("725x300+150+150")
         self.main_window.title('TzSoundBoard')
-        self.create_menu()
-        self.tools = self.set_tool_frame()
+        self.main_menu = self.set_menu()
+        self.tools_frame = self.set_tool_frame()
+        self.volume_widget = self.set_volume_widget()
         self.sound_frame = self.set_sound_frame()
         self.set_volume(100)
+
+    def set_menu(self):
+        menu_widget = tkinter.Menu(self.main_window)
+        self.main_window.config(menu=menu_widget)
+
+        file = tkinter.Menu(menu_widget)
+        file.add_command(label="Add Sound Effect", command=self.pick_file)
+        file.add_command(label="Exit", command=self.close)
+        menu_widget.add_cascade(label="File", menu=file)
+        return menu_widget
 
     def set_tool_frame(self):
         tools = tkinter.LabelFrame(self.main_window, text="Tools", borderwidth=1, relief="groove", width=200, padx=5,
                                    pady=5)
         tools.grid(row=0, column=0, sticky="ne")
 
-        # add volume controlls
-        self.volume = tkinter.Scale(tools, label="Volume", orient=tkinter.VERTICAL, from_=100, to=0, command=self.set_volume)
-        self.volume.grid(row=1, column=0)
-
-        # add: add_sound controls.
         button = tkinter.Button(tools, text="Add New Sound", height=2, command=self.pick_file)
         button.grid(row=0, column=0)
         return tools
+
+    def set_volume_widget(self):
+        # add volume controls
+        volume_widget = tkinter.Scale(self.tools_frame, label="Volume", orient=tkinter.VERTICAL, from_=100, to=0,
+                                      command=self.set_volume)
+        volume_widget.grid(row=1, column=0)
+        return volume_widget
 
     def set_sound_frame(self):
         sound_frame = tkinter.Frame(self.main_window, padx=5, pady=5)
@@ -53,34 +64,29 @@ class WindowController(object):
     def close(self):
         self.main_window.destroy()
 
+    def calculate_position(self):
+        total_sounds = len(self.sound_registry) - 1
+        rows = int(total_sounds / 4)
+        if total_sounds % 4 == 0:
+            col = 0
+        else:
+            col = int(total_sounds % 4)
+        return rows, col
+
     def pick_file(self):
         file_path = filedialog.askopenfilename(initialdir='./', title="Select file", filetypes=self.MUSIC_FILE_TYPES)
         if file_path:
             new_sound = Sound(file_path, os.path.basename(file_path), "")
-            self.sounds.append(new_sound)
-            total_sounds = len(self.sounds) - 1
-            rows = int(total_sounds / 4)
-            if total_sounds % 4 == 0:
-                col = 0
-            else:
-                col = int(total_sounds % 4)
+            self.sound_registry.append(new_sound)
+            row, col = self.calculate_position()
             button = tkinter.Button(self.sound_frame, text=os.path.basename(file_path), height=10, width=20)
-            button.grid(row=rows, column=col)
+            button.grid(row=row, column=col)
             button.config(command=new_sound.play)
         else:
             raise NotImplementedError("No file Selected")
 
-    def create_menu(self):
-        self.menu = tkinter.Menu(self.main_window)
-        self.main_window.config(menu=self.menu)
-
-        file = tkinter.Menu(self.menu)
-        file.add_command(label="Add Sound Effect", command=self.pick_file)
-        file.add_command(label="Exit", command=self.close)
-        self.menu.add_cascade(label="File", menu=file)
-
     def set_volume(self, value):
-        self.volume.set(value)
+        self.volume_widget.set(value)
         Sound.set_volume(value)
 
 
@@ -105,7 +111,6 @@ class Sound(object):
     @classmethod
     def set_volume(cls, value):
         value = int(value)
-        print("is called: {}".format(value))
         if value == 0:
             pygame.mixer.music.set_volume(0)
         else:
