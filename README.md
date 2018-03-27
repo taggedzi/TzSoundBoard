@@ -1,3 +1,5 @@
+[![CircleCI](https://circleci.com/gh/taggedzi/TzSoundBoard.svg?style=svg)](https://circleci.com/gh/taggedzi/TzSoundBoard)
+
 # TzSoundBoard
 
 This is TaggedZi's Sound Board. 
